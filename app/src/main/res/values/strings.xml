@@ -1,0 +1,35 @@
+<resources>
+    <string name="app_name">PhotoMapper</string>
+    <string name="take_new_photo">Take New Photo</string>
+    <string name="hint_word">Task title…</string>
+    <string name="button_save">Save</string>
+    <string name="empty_not_saved">Task not saved because it is empty.</string>
+    <string name="add_task">Add task</string>
+    <string name="channel_name">TaskListNotificationChannel</string>
+    <string name="channel_description">Default notification channel for PhotoMapper Application</string>
+    <string name="empty_task_text">Enter task here</string>
+    <string name="string_due_date">Due date…</string>
+    <string name="string_due_time">Due time…</string>
+    <string name="default_body_text">Fill in body…</string>
+    <string name="recurring_task_text">Is a recurring this task?</string>
+    <string name="string_is_completed">Is this task already completed?</string>
+    <string name="string_recurrence">Recurrence:</string>
+    <string name="string_delete">Delete</string>
+    <string name="string_pick_date">Pick date</string>
+    <string name="string_pick_time">Pick time</string>
+    <string name="EXTRA_ID">com.github.truefmartin.NewTaskActivity.EXTRA_ID</string>
+    <string name="EXTRA_TITLE_ID">com.github.truefmartin.NewTaskActivity.TITLE_ID</string>
+    <string name="EXTRA_TIME_ID">com.github.truefmartin.NewTaskActivity.TIME_ID</string>
+
+    <string name="string_completed_button">Done</string>
+    <string name="string_todo_button">ToDo</string>
+    <string name="string_on_delete_title">Delete Confirmation</string>
+    <string name="string_on_delete_msg">Are you sure you want to delete this task?</string>
+    <string-array name="recurring_options">
+        <item>None</item>
+        <item>Daily</item>
+        <item>Weekly</item>
+        <item>Monthly</item>
+        <item>Yearly</item>
+    </string-array>
+</resources>
