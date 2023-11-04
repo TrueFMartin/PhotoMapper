@@ -4,7 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.util.Log
-import com.github.truefmartin.photomapper.Model.Task
+import com.github.truefmartin.photomapper.Model.PhotoPath
 import com.github.truefmartin.photomapper.NewEditTaskActivity.EXTRA_ID
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
@@ -18,8 +18,8 @@ class MyReceiver : BroadcastReceiver() {
 
         val repository = (context.applicationContext as PhotoMapper).repository
         CoroutineScope(SupervisorJob()).launch {
-            val task: Task = repository.getTaskNotLive(id)
-            Log.d("MyReceiver", "Task is ${task.title} with date ${task.date}")
+            val photoPath: PhotoPath = repository.getPhotoNotLive(id)
+            Log.d("MyReceiver", "Task is ${photoPath.fileName} with date ${photoPath.date}")
         }
 
     }

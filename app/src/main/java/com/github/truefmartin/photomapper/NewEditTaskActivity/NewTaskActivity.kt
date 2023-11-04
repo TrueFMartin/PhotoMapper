@@ -6,14 +6,15 @@ import android.os.Bundle
 import android.util.Log
 import android.widget.Button
 import android.widget.EditText
-import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.viewModels
-import com.github.truefmartin.photomapper.Model.Task
+import com.github.truefmartin.photomapper.Model.PhotoPath
 import com.github.truefmartin.photomapper.R
 import com.github.truefmartin.photomapper.PhotoMapper
 import com.github.truefmartin.photomapper.NotificationHandler
+import com.github.truefmartin.photomapper.PhotoViewerActivity.PhotoViewerModelFactory
+import com.github.truefmartin.photomapper.PhotoViewerActivity.PhotoViewerViewModel
 import com.google.android.material.switchmaterial.SwitchMaterial
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
@@ -45,13 +46,10 @@ class NewTaskActivity : AppCompatActivity() {
 
     private lateinit var recurringVal: RecurringState
 
-    private lateinit var spinner: Spinner
 
-    private var isComplete = false;
 
-    private var taskNotificationID: Int = -1
-    private val newTaskViewModel: NewTaskViewModel by viewModels {
-        NewTaskViewModelFactory((application as PhotoMapper).repository,-1)
+    private val photoViewerViewModel: PhotoViewerViewModel by viewModels {
+        PhotoViewerModelFactory((application as PhotoMapper).repository,-1)
     }
 
     private val notificationHandler = NotificationHandler
@@ -91,13 +89,13 @@ class NewTaskActivity : AppCompatActivity() {
 //--------------handle editing a previous task----------------
 
         if(id != -1){
-            newTaskViewModel.updateId(id)
+            photoViewerViewModel.updateId(id)
         }
 
-        newTaskViewModel.curTask.observe(this){
+        photoViewerViewModel.curPhotoPath.observe(this){
             task->task?.let {
-            etTaskTitle.setText(task.title)
-            etTaskBody.setText(task.body)
+            etTaskTitle.setText(task.fileName)
+            etTaskBody.setText(task.description)
 
             tvDateView.text = task.date.format(formatterDate)
             tvTimeView.text = task.date.format(formatterTime)
@@ -171,27 +169,27 @@ class NewTaskActivity : AppCompatActivity() {
         CoroutineScope(SupervisorJob()).launch {
             if(id==-1) {
                 taskNotificationID = Random.nextInt(Int.MAX_VALUE - 1)
-                val tempTask = Task(null, etTaskTitle.text.toString(),etTaskBody.text.toString(),
+                val tempPhotoPath = PhotoPath(null, etTaskTitle.text.toString(),etTaskBody.text.toString(),
                     newDateTime, isComplete, recurringVal, taskNotificationID)
                 if (!isComplete) {
-                    notificationHandler.scheduleNotification(tempTask)
+                    notificationHandler.scheduleNotification(tempPhotoPath)
                 // If marked as 'completed', but is a recurring task, create new incomplete task at next date
                 } else if (recurringVal != RecurringState.NONE) {
-                    tempTask.date = recurringVal.modifyDate(tempTask.date)
-                    tempTask.completed = false
-                    notificationHandler.scheduleNotification(tempTask)
+                    tempPhotoPath.date = recurringVal.modifyDate(tempPhotoPath.date)
+                    tempPhotoPath.completed = false
+                    notificationHandler.scheduleNotification(tempPhotoPath)
                     // Inform user why their task marked as 'complete' is showing as 'incomplete'
                     runOnUiThread( kotlinx.coroutines.Runnable {
                         toaster("New recurring task set to future date as 'ToDo'")
                     })
                 }
-                newTaskViewModel.insert(tempTask)
+                photoViewerViewModel.insertNoReturn(tempPhotoPath)
             // Updating a task instead of creating a new one
             }else{
-                val updatedTask = newTaskViewModel.curTask.value
+                val updatedTask = photoViewerViewModel.curPhotoPath.value
                 if (updatedTask != null) {
-                    updatedTask.title = etTaskTitle.text.toString()
-                    updatedTask.body = etTaskBody.text.toString()
+                    updatedTask.fileName = etTaskTitle.text.toString()
+                    updatedTask.description = etTaskBody.text.toString()
                     updatedTask.date = newDateTime
                     updatedTask.repeated = recurringVal
 
@@ -217,7 +215,7 @@ class NewTaskActivity : AppCompatActivity() {
                         notificationHandler.scheduleNotification(updatedTask)
                         updatedTask.completed = false
                     }
-                    newTaskViewModel.update(updatedTask)
+                    photoViewerViewModel.update(updatedTask)
                 }
             }
         }
@@ -251,7 +249,7 @@ class NewTaskActivity : AppCompatActivity() {
         } else {
             // Delete task from DB
             CoroutineScope(SupervisorJob()).launch {
-                newTaskViewModel.curTask.value?.let { newTaskViewModel.deleteTask(it) }
+                photoViewerViewModel.curPhotoPath.value?.let { photoViewerViewModel.deleteTask(it) }
             }
             // Delete task alarm
             notificationHandler.removeNotification(taskNotificationID)

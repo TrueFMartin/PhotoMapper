@@ -25,6 +25,7 @@ import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 
 class OpenStreetMapFragment : Fragment(), Marker.OnMarkerClickListener {
 
+    private var onMarkerClickCallback: (Int) -> Unit = {}
     private lateinit var mMap: MapView
     private lateinit var mLocationOverlay: MyLocationNewOverlay
     private lateinit var mCompassOverlay: CompassOverlay
@@ -114,8 +115,7 @@ class OpenStreetMapFragment : Fragment(), Marker.OnMarkerClickListener {
     fun changeCenterLocation(geoPoint: GeoPoint) {
         curLocation = geoPoint
         val mapController = mMap.controller
-        mapController.setCenter(curLocation);
-
+        mapController.setCenter(curLocation)
     }
 
     fun addMarker(geoPoint: GeoPoint, id: Int) {
@@ -147,9 +147,17 @@ class OpenStreetMapFragment : Fragment(), Marker.OnMarkerClickListener {
     }
 
     override fun onMarkerClick(marker: Marker?, mapView: MapView?): Boolean {
-        marker?.id?.let { Log.d("OpenStreetMapFragment", it) }
+        // Use call back function to respond to marker click
+        marker?.id?.let {
+            Log.d("OpenStreetMapFragment", it)
+            onMarkerClickCallback(id)
+        }
 
         return true
+    }
+
+    fun setMarkerClickListener(callBackFunc: (Int) -> Unit) {
+        this.onMarkerClickCallback = callBackFunc
     }
 
     companion object {

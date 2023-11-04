@@ -1,28 +1,35 @@
 package com.github.truefmartin.photomapper.Model
 
 import androidx.room.TypeConverter
+import org.osmdroid.util.GeoPoint
+import java.text.SimpleDateFormat
 import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+import java.util.Date
+import java.util.Locale
 
 class Converters {
+    private val timeFormatter: DateTimeFormatter? = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss", Locale.US)
     @TypeConverter
-    fun fromTimestamp(time: String?): LocalDateTime? {
-        return time?.let { LocalDateTime.parse(it) }
+    fun fromDatabaseTimestamp(time: String?): LocalDateTime? {
+        return time?.let { LocalDateTime.parse(time, timeFormatter) }
     }
 
     @TypeConverter
-    fun dateToTimestamp(time: LocalDateTime?): String? {
-        return time?.toString()
+    fun toDatabaseTimeStamp(time: LocalDateTime?): String? {
+        return time?.format(timeFormatter)
     }
 
     @TypeConverter
-    fun fromBoolean(intBool: Int): Boolean {
-        return intBool != 0
+    fun fromDatabaseGeo(geo: String?): GeoPoint {
+        return GeoPoint.fromDoubleString(geo, ',');
     }
+
     @TypeConverter
-    fun toBoolean(boolean: Boolean): Int {
-        return if (boolean)
-            1
-        else
-            0
+    fun toDatabaseGeo(geo: GeoPoint?): String {
+        return geo.toString()
     }
+
+
+
 }

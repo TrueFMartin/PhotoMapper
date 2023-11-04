@@ -5,7 +5,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.util.Log
-import com.github.truefmartin.photomapper.Model.Task
+import com.github.truefmartin.photomapper.Model.PhotoPath
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -18,10 +18,10 @@ object NotificationHandler {
     private fun getFormat(): DateTimeFormatter? {
         return DateTimeFormatter.ofPattern("MM/dd/yy, hh:mm a", Locale.getDefault())
     }
-    fun scheduleNotification(task: Task) {
-        val time = task.date
-        val title = task.title
-        val notificationId = task.noteID
+    fun scheduleNotification(photoPath: PhotoPath) {
+        val time = photoPath.date
+        val title = photoPath.fileName
+        val notificationId = photoPath.noteID
         if(time.isAfter(LocalDateTime.now())){
             Log.d("MainActivity","Scheduling Notification")
             val alarmIntent = Intent(this.applicationContext, AlarmReceiver::class.java)

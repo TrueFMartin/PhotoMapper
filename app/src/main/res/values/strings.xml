@@ -10,7 +10,7 @@
     <string name="empty_task_text">Enter task here</string>
     <string name="string_due_date">Due date…</string>
     <string name="string_due_time">Due time…</string>
-    <string name="default_body_text">Fill in body…</string>
+    <string name="default_description_text">Description…</string>
     <string name="recurring_task_text">Is a recurring this task?</string>
     <string name="string_is_completed">Is this task already completed?</string>
     <string name="string_recurrence">Recurrence:</string>

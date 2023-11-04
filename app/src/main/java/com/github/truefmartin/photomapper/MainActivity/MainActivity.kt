@@ -3,19 +3,22 @@ package com.github.truefmartin.photomapper.MainActivity
 import android.Manifest
 import android.app.Activity
 import android.app.AlertDialog
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Location
-import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.os.Environment
 import android.preference.PreferenceManager
+import android.provider.MediaStore
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.github.truefmartin.MainActivity.TaskListViewModel
@@ -28,7 +31,7 @@ import com.github.truefmartin.photomapper.PhotoMapper
 import com.github.truefmartin.photomapper.MyReceiver
 import com.github.truefmartin.photomapper.NewEditTaskActivity.RecurringState
 import com.github.truefmartin.photomapper.NotificationHandler
-import com.github.truefmartin.photomapper.NotificationUtil
+import com.github.truefmartin.photomapper.PhotoViewerActivity.PhotoViewerActivity
 import com.github.truefmartin.photomapper.util.LocationUtilCallback
 import com.github.truefmartin.photomapper.util.createLocationCallback
 import com.github.truefmartin.photomapper.util.createLocationRequest
@@ -42,17 +45,22 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import org.osmdroid.config.Configuration
+import org.osmdroid.util.GeoPoint
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
     private lateinit var mapsFragment: OpenStreetMapFragment
+    private var numMarkers:Int = 0
 
-    private val notificationHandler = NotificationHandler
-    private var notificationPermissionGranted = false
     //Boolean to keep track of whether permissions have been granted
     private var locationPermissionEnabled: Boolean = false
 
     //Boolean to keep track of whether activity is currently requesting location Updates
     private var locationRequestsEnabled: Boolean = false
+
     //Member object for the FusedLocationProvider
     private lateinit var locationProviderClient: FusedLocationProviderClient
 
@@ -63,9 +71,21 @@ class MainActivity : AppCompatActivity() {
     //Needed to remove requests for location updates
     private lateinit var mLocationCallback: LocationCallback
 
-    // Launcher for locationPermissions. To be launched when location permissions
-    // are not available
-    private val locationPermissionRequest = registerForActivityResult(
+    val takePictureResultLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()){
+            result: ActivityResult ->
+        if(result.resultCode == Activity.RESULT_CANCELED){
+            Log.d("MainActivity","Take Picture Activity Cancelled")
+        }else{
+            Log.d("MainActivity", "Picture Taken")
+            val takeShowPictureActivityIntent: Intent = Intent(this,PhotoViewerActivity::class.java)
+            takeShowPictureActivityIntent.putExtra("GEOPHOTO_LOC",
+                result.data?.getStringExtra("GEOPHOTO_LOC"))
+            takeShowPictureActivityIntent.putExtra("GEOPHOTO_ID",10)
+            startActivity(takeShowPictureActivityIntent)
+        }
+    }
+
+    val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
         when {
@@ -87,31 +107,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
-    //LocationUtilCallback object
-    //Dynamically defining two results from locationUtils
-    //Namely requestPermissions and locationUpdated
-    private val locationUtilCallback = object : LocationUtilCallback {
-        //If locationUtil request fails because of permission issues
-        //Ask for permissions
-        override fun requestPermissionCallback() {
-            locationPermissionRequest.launch(
-                arrayOf(
-                    Manifest.permission.ACCESS_FINE_LOCATION,
-                    Manifest.permission.ACCESS_COARSE_LOCATION
-                )
-            )
-        }
-
-        //If locationUtil returns a Location object
-        //Populate the current location and log
-        override fun locationUpdatedCallback(location: Location) {
-            mCurrentLocation = location
-            Log.d(
-                "MainActivity",
-                "Location is [Lat: ${location.latitude}, Long: ${location.longitude}]"
-            )
-        }
-    }
 
     //This is our viewModel instance for the MainActivity class
     private val taskListViewModel: TaskListViewModel by viewModels {
@@ -130,53 +125,33 @@ class MainActivity : AppCompatActivity() {
 
 
 
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
-        //Get a locationProviderClient object
+
+
+        //Get preferences for tile cache
+        Configuration.getInstance().load(this, getSharedPreferences(
+            "${packageName}_preferences", Context.MODE_PRIVATE))
         locationProviderClient = LocationServices.getFusedLocationProviderClient(this)
+
+        //Check for location permissions
+        checkForLocationPermission()
+
         //Attempt to get the last known location
         //Will either require permission check or will return last known location
         //through the locationUtilCallback
-        getLastLocation(this, locationProviderClient, locationUtilCallback)
-
-        findViewById<FloatingActionButton>(R.id.floatingActionButton).setOnClickListener{
-            takeNewPhoto()
-        }
-
-        //Get preferences for tile cache
-        Configuration.getInstance().load(this, PreferenceManager.getDefaultSharedPreferences(this))
+        //getLastLocation(this, locationProviderClient, locationUtilCallback)
 
         //Get access to mapsFragment object
-        mapsFragment = supportFragmentManager.findFragmentById(R.id.fragmentContainerView)
+        mapsFragment = supportFragmentManager.findFragmentById(R.id.fragment_container_view)
                 as OpenStreetMapFragment? ?:OpenStreetMapFragment.newInstance().also{
-            replaceFragmentInActivity(it,R.id.fragmentContainerView)
+            replaceFragmentInActivity(it,R.id.fragment_container_view)
         }
-
-        val recyclerView = findViewById<RecyclerView>(R.id.recyclerview)
-
-        val adapter = TaskListAdapter(
-            ::recyclerListener,
-            ::recyclerButtonListener
-        )
-        recyclerView.adapter = adapter
-        recyclerView.layoutManager = LinearLayoutManager(this)
-
-        // Add an observer on the LiveData returned by getAlphabetizedWords.
-        // The onChanged() method fires when the observed data changes and the activity is
-        // in the foreground.
-        taskListViewModel.allTasks.observe( this) { tasks ->
-            // Update the cached copy of the words in the adapter.
-            tasks.let {
-                adapter.submitList(it)
-            }
-        }
-
-        val fab = findViewById<FloatingActionButton>(R.id.fab)
+        mapsFragment.changeCenterLocation(GeoPoint(mCurrentLocation.latitude, mCurrentLocation.longitude))
+        mapsFragment.setMarkerClickListener(::markerClickCallBack)
+        val fab = findViewById<FloatingActionButton>(R.id.fab_take_picture)
         fab.setOnClickListener {
-            val intent = Intent(this@MainActivity, NewTaskActivity::class.java)
-            startNewTaskActivity.launch(intent)
+            takeNewPhoto()
         }
     }
 
@@ -195,12 +170,73 @@ class MainActivity : AppCompatActivity() {
             stopLocationUpdates(locationProviderClient, mLocationCallback)
         }
     }
-
     private fun takeNewPhoto(){
-        mapsFragment.clearMarkers()
-        //mapsFragment.clearOneMarker(25)
+        val takeShowPictureActivityIntent: Intent = Intent(this,PhotoViewerActivity::class.java)
+
+        takeShowPictureActivityIntent.putExtra("GEOPOINT-LAT", mCurrentLocation.latitude)
+        takeShowPictureActivityIntent.putExtra("GEOPOINT-LONG", mCurrentLocation.longitude)
+
+        takePictureResultLauncher.launch(takeShowPictureActivityIntent)
     }
 
+    private fun markerClickCallBack(id: Int) {
+        val takeShowPictureActivityIntent: Intent = Intent(this,PhotoViewerActivity::class.java)
+
+        takeShowPictureActivityIntent.putExtra("GEOPHOTO_ID", id)
+        startActivity(takeShowPictureActivityIntent)
+    }
+    private fun checkForLocationPermission(){
+        when {
+            ContextCompat.checkSelfPermission(
+                this, Manifest.permission.ACCESS_FINE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED -> {
+                startLocationRequests()
+                //getLastKnownLocation()
+                //registerLocationUpdateCallbacks()
+            }
+            else -> {
+                requestPermissionLauncher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION))
+            }
+        }
+    }
+
+    //LocationUtilCallback object
+    //Dynamically defining two results from locationUtils
+    //Namely requestPermissions and locationUpdated
+    private val locationUtilCallback = object : LocationUtilCallback {
+        //If locationUtil request fails because of permission issues
+        //Ask for permissions
+        override fun requestPermissionCallback() {
+            requestPermissionLauncher.launch(
+                arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                )
+            )
+        }
+
+        //If locationUtil returns a Location object
+        //Populate the current location and log
+        override fun locationUpdatedCallback(location: Location) {
+            mCurrentLocation = location
+            mapsFragment.changeCenterLocation(GeoPoint(location.latitude,location.longitude))
+            Log.d(
+                "MainActivity",
+                "Location is [Lat: ${location.latitude}, Long: ${location.longitude}]"
+            )
+        }
+    }
+
+    private fun startLocationRequests() {
+        //If we aren't currently getting location updates
+        if (!locationRequestsEnabled) {
+            //create a location callback
+            mLocationCallback = createLocationCallback(locationUtilCallback)
+            //and request location updates, setting the boolean equal to whether this was successful
+            locationRequestsEnabled =
+                createLocationRequest(this, locationProviderClient, mLocationCallback)
+        }
+    }
     private fun recyclerListener(id: Int) {
         //This is the callback function to be executed
         //when a view in the TaskListAdapter is clicked
@@ -273,15 +309,5 @@ class MainActivity : AppCompatActivity() {
         alertDialog.show()
     }
 
-    private fun startLocationRequests() {
-        //If we aren't currently getting location updates
-        if (!locationRequestsEnabled) {
-            //create a location callback
-            mLocationCallback = createLocationCallback(locationUtilCallback)
-            //and request location updates, setting the boolean equal to whether this was successful
-            locationRequestsEnabled =
-                createLocationRequest(this, locationProviderClient, mLocationCallback)
-        }
-    }
 }
 

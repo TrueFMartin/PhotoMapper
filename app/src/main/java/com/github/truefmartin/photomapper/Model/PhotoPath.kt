@@ -3,19 +3,19 @@ package com.github.truefmartin.photomapper.Model
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import com.github.truefmartin.photomapper.NewEditTaskActivity.RecurringState
+import org.osmdroid.util.GeoPoint
+import java.text.SimpleDateFormat
 import java.time.LocalDateTime
 
-@Entity(tableName = "task_table")
-class Task(
+@Entity(tableName = "photo_table")
+class PhotoPath(
     //Note that we now allow for ID as the primary key
     //It needs to be nullable when creating a new word in the database
     @PrimaryKey(autoGenerate = true) val id: Int?,
-    @ColumnInfo(name = "title") var title: String,
-    @ColumnInfo(name = "body") var body: String,
+    @ColumnInfo(name = "filename") var fileName: String,
+    @ColumnInfo(name = "description") var description: String,
     @ColumnInfo(name = "date") var date: LocalDateTime,
-    @ColumnInfo(name = "completed") var completed: Boolean,
-    @ColumnInfo(name = "repeated") var repeated: RecurringState,
-    @ColumnInfo(name = "notification_id") var noteID: Int
+    @ColumnInfo(name = "geo") var geo: GeoPoint,
+
 )
 

@@ -10,7 +10,7 @@ import android.widget.TextView
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
-import com.github.truefmartin.photomapper.Model.Task
+import com.github.truefmartin.photomapper.Model.PhotoPath
 import com.github.truefmartin.photomapper.R
 
 import java.time.LocalDateTime
@@ -18,7 +18,7 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 
-class TaskListAdapter(val taskClickedFn:(id: Int)->Unit, val buttonClickedFn:(id: Int, isChecked: Boolean)->Unit): ListAdapter<Task, TaskListAdapter.TaskViewHolder>(TasksComparator()) {
+class TaskListAdapter(val taskClickedFn:(id: Int)->Unit, val buttonClickedFn:(id: Int, isChecked: Boolean)->Unit): ListAdapter<PhotoPath, TaskListAdapter.TaskViewHolder>(TasksComparator()) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): TaskViewHolder {
         return TaskViewHolder.create(parent)
@@ -26,7 +26,7 @@ class TaskListAdapter(val taskClickedFn:(id: Int)->Unit, val buttonClickedFn:(id
 
     override fun onBindViewHolder(holder: TaskViewHolder, position: Int) {
         val current = getItem(position)
-        holder.bind(current.title, current.date, current.completed)
+        holder.bind(current.fileName, current.date, current.completed)
         holder.itemView.tag= current
         holder.itemView.setOnClickListener{
             current.id?.let { it1 -> taskClickedFn(it1) }
@@ -60,12 +60,12 @@ class TaskListAdapter(val taskClickedFn:(id: Int)->Unit, val buttonClickedFn:(id
         }
     }
 
-    class TasksComparator : DiffUtil.ItemCallback<Task>() {
-        override fun areItemsTheSame(oldItem: Task, newItem: Task): Boolean {
+    class TasksComparator : DiffUtil.ItemCallback<PhotoPath>() {
+        override fun areItemsTheSame(oldItem: PhotoPath, newItem: PhotoPath): Boolean {
             return oldItem === newItem
         }
-        override fun areContentsTheSame(oldItem: Task, newItem: Task): Boolean {
-            return (oldItem.title == newItem.title
+        override fun areContentsTheSame(oldItem: PhotoPath, newItem: PhotoPath): Boolean {
+            return (oldItem.fileName == newItem.fileName
                     && oldItem.date == newItem.date
                     && oldItem.completed == newItem.completed)
         }
